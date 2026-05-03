@@ -1,0 +1,362 @@
+/* ===== リセット & ベース ===== */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --c-bg:       #f5f3ee;
+  --c-surface:  #ffffff;
+  --c-border:   #e2ddd6;
+  --c-text:     #1a1a18;
+  --c-muted:    #7a7870;
+  --c-ese:      #c0392b;
+  --c-ese-bg:   #fdf0ef;
+  --c-ese-bd:   #f5c0bb;
+  --c-real:     #1a7a56;
+  --c-real-bg:  #edf7f3;
+  --c-real-bd:  #a8ddc8;
+  --c-accent:   #3d5a99;
+  --c-accent-bg:#eef1f9;
+  --c-timer-ok: #1a7a56;
+  --c-timer-mid:#d47c1a;
+  --c-timer-low:#c0392b;
+  --radius-sm:  6px;
+  --radius-md:  10px;
+  --radius-lg:  16px;
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md:  0 4px 12px rgba(0,0,0,0.10);
+  font-size: 16px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --c-bg:       #1c1b19;
+    --c-surface:  #2a2926;
+    --c-border:   #3d3c39;
+    --c-text:     #f0ece4;
+    --c-muted:    #908e88;
+    --c-ese:      #e8736a;
+    --c-ese-bg:   #2d1e1c;
+    --c-ese-bd:   #6b3530;
+    --c-real:     #4cbf8e;
+    --c-real-bg:  #192e26;
+    --c-real-bd:  #2a5e46;
+    --c-accent:   #7a9ed4;
+    --c-accent-bg:#1e2535;
+    --c-timer-ok: #4cbf8e;
+    --c-timer-mid:#e8a83a;
+    --c-timer-low:#e8736a;
+    --shadow-sm:  0 1px 3px rgba(0,0,0,0.3);
+    --shadow-md:  0 4px 12px rgba(0,0,0,0.35);
+  }
+}
+
+body {
+  font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Yu Gothic', sans-serif;
+  background: var(--c-bg);
+  color: var(--c-text);
+  min-height: 100vh;
+  padding: 1rem;
+  line-height: 1.6;
+}
+
+/* ===== タイポグラフィ ===== */
+h1 {
+  font-size: 22px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+h2 {
+  font-size: 17px;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+.subtitle {
+  font-size: 13px;
+  color: var(--c-muted);
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+.label {
+  font-size: 12px;
+  color: var(--c-muted);
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+.muted { color: var(--c-muted); }
+.fs12  { font-size: 12px; }
+.fs13  { font-size: 13px; }
+.fs14  { font-size: 14px; }
+.fs18  { font-size: 18px; font-weight: 600; }
+.fs22  { font-size: 22px; font-weight: 700; }
+
+/* ===== レイアウト ===== */
+.card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 0.75rem;
+}
+.flex       { display: flex; }
+.col        { flex-direction: column; }
+.center     { align-items: center; }
+.vcenter    { justify-content: center; }
+.between    { justify-content: space-between; }
+.wrap       { flex-wrap: wrap; }
+.gap4       { gap: 4px; }
+.gap8       { gap: 8px; }
+.gap12      { gap: 12px; }
+.gap16      { gap: 16px; }
+.w100       { width: 100%; }
+.mt05       { margin-top: 0.4rem; }
+.mt1        { margin-top: 0.75rem; }
+.mt15       { margin-top: 1.1rem; }
+.mt2        { margin-top: 1.5rem; }
+.mb05       { margin-bottom: 0.4rem; }
+.mb1        { margin-bottom: 0.75rem; }
+.mb15       { margin-bottom: 1.1rem; }
+.text-center{ text-align: center; }
+
+/* ===== ボタン ===== */
+button {
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--c-border);
+  background: transparent;
+  color: var(--c-text);
+  padding: 8px 16px;
+  transition: background 0.12s, transform 0.08s, border-color 0.12s;
+  line-height: 1.4;
+}
+button:hover  { background: var(--c-bg); }
+button:active { transform: scale(0.97); }
+
+.btn-primary {
+  background: var(--c-text);
+  color: var(--c-surface);
+  border-color: var(--c-text);
+  font-weight: 600;
+}
+.btn-primary:hover { opacity: 0.82; background: var(--c-text); }
+
+.btn-ese {
+  border-color: var(--c-ese-bd);
+  color: var(--c-ese);
+}
+.btn-ese:hover   { background: var(--c-ese-bg); }
+.btn-ese.active  { background: var(--c-ese-bg); border-color: var(--c-ese); font-weight: 600; }
+
+.btn-real {
+  border-color: var(--c-real-bd);
+  color: var(--c-real);
+}
+.btn-real:hover  { background: var(--c-real-bg); }
+.btn-real.active { background: var(--c-real-bg); border-color: var(--c-real); font-weight: 600; }
+
+.btn-icon {
+  padding: 6px 10px;
+  font-size: 13px;
+  border-radius: var(--radius-sm);
+}
+
+/* ===== カウンター ===== */
+.counter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.counter-val {
+  font-size: 24px;
+  font-weight: 700;
+  min-width: 32px;
+  text-align: center;
+}
+.counter button {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  font-size: 20px;
+  border-radius: 50%;
+  line-height: 1;
+}
+
+/* ===== カテゴリタグ ===== */
+.cat-tag {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--c-border);
+  background: transparent;
+  color: var(--c-muted);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.cat-tag.on {
+  background: var(--c-text);
+  color: var(--c-surface);
+  border-color: var(--c-text);
+}
+
+/* ===== お題ボックス ===== */
+.topic-box {
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  margin: 0.75rem 0;
+  transition: filter 0.2s;
+  user-select: none;
+  cursor: pointer;
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.topic-box.blurred { filter: blur(20px); }
+
+/* ===== キャンバス ===== */
+#canvas, #vote-canvas, #result-canvas {
+  border: 1.5px solid var(--c-border);
+  border-radius: var(--radius-md);
+  cursor: crosshair;
+  touch-action: none;
+  display: block;
+  background: #ffffff;
+  max-width: 100%;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ===== 色ボタン ===== */
+.color-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.1s, border-color 0.1s;
+  flex-shrink: 0;
+}
+.color-dot:hover  { transform: scale(1.18); }
+.color-dot.active { border-color: var(--c-accent); box-shadow: 0 0 0 2px var(--c-accent-bg); }
+
+/* ===== タイマー ===== */
+.timer-bar-wrap {
+  height: 5px;
+  background: var(--c-border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 6px 0 10px;
+}
+.timer-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 1s linear, background 0.4s;
+  background: var(--c-timer-ok);
+}
+.timer-num {
+  font-size: 26px;
+  font-weight: 700;
+  min-width: 48px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== バッジ・チップ ===== */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 13px;
+  border: 1px solid var(--c-border);
+  background: var(--c-bg);
+}
+.chip-ese  { border-color: var(--c-ese-bd);  background: var(--c-ese-bg);  color: var(--c-ese); }
+.chip-real { border-color: var(--c-real-bd); background: var(--c-real-bg); color: var(--c-real); }
+
+/* ===== 投票列 ===== */
+.vote-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--c-border);
+}
+.vote-row:last-child { border-bottom: none; }
+.vote-name {
+  font-size: 14px;
+  font-weight: 500;
+  min-width: 90px;
+  flex: 1;
+}
+.vote-row button { padding: 5px 14px; font-size: 13px; }
+
+/* ===== 結果セクション ===== */
+.result-block {
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  padding: 0.9rem 1rem;
+  margin-bottom: 0.6rem;
+}
+.result-block .label { margin-bottom: 6px; }
+
+/* ===== 入力 ===== */
+input[type="text"] {
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  font-size: 14px;
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+input[type="text"]:focus { border-color: var(--c-accent); }
+
+/* ===== ページヘッダー ===== */
+.page-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  padding-top: 0.5rem;
+}
+.page-header h1 { margin-bottom: 4px; }
+
+/* ===== セクション表示制御 ===== */
+.section { display: none; }
+.section.active { display: block; }
+
+/* ===== 勝者バナー ===== */
+.winner-banner {
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  margin: 0.75rem 0;
+}
+.winner-ese  { background: var(--c-ese-bg);  color: var(--c-ese);  border: 1px solid var(--c-ese-bd); }
+.winner-real { background: var(--c-real-bg); color: var(--c-real); border: 1px solid var(--c-real-bd); }
+
+/* ===== スクリーンリーダー専用 ===== */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}

@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>エセ芸術家 × ワードウルフ</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h2 class="sr-only">エセ芸術家 × ワードウルフ ゲーム</h2>
+
+<div class="page-header">
+  <h1>エセ芸術家 × ワードウルフ</h1>
+  <p class="subtitle">お題を描きながら、エセを見破れ！</p>
+</div>
+
+<!-- ========== セットアップ ========== -->
+<div id="setup-section" class="section active">
+  <div class="card">
+    <h2>ゲーム設定</h2>
+
+    <div class="label">プレイヤー人数</div>
+    <div class="counter mb1">
+      <button onclick="changePlayers(-1)">－</button>
+      <span class="counter-val" id="player-count-disp">4</span>
+      <button onclick="changePlayers(1)">＋</button>
+      <span class="muted fs13">人 (3〜10)</span>
+    </div>
+
+    <div class="flex gap16 wrap mb1">
+      <div>
+        <div class="label">エセ人数</div>
+        <div class="counter">
+          <button onclick="changeEse(-1)">－</button>
+          <span class="counter-val" id="ese-count-disp">1</span>
+          <button onclick="changeEse(1)">＋</button>
+          <span class="muted fs13">人</span>
+        </div>
+      </div>
+      <div>
+        <div class="label">制限時間 (秒/人)</div>
+        <div class="counter">
+          <button onclick="changeTime(-10)">－</button>
+          <span class="counter-val" id="time-disp">30</span>
+          <button onclick="changeTime(10)">＋</button>
+          <span class="muted fs13">秒</span>
+        </div>
+      </div>
+      <div>
+        <div class="label">ラウンド数</div>
+        <div class="counter">
+          <button onclick="changeRounds(-1)">－</button>
+          <span class="counter-val" id="rounds-disp">2</span>
+          <button onclick="changeRounds(1)">＋</button>
+          <span class="muted fs13">周</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt15">
+      <div class="label mb05">カテゴリ (複数選択可)</div>
+      <div class="flex gap4 wrap" id="cat-list"></div>
+    </div>
+
+    <button class="btn-primary w100 mt2" style="padding:12px" onclick="startGame()">ゲームスタート</button>
+  </div>
+</div>
+
+<!-- ========== お題確認 ========== -->
+<div id="reveal-section" class="section">
+  <div class="card">
+    <div style="font-size:20px;font-weight:700;margin-bottom:0.5rem" id="reveal-name-label"></div>
+    <div class="topic-box blurred" id="reveal-topic" onclick="toggleReveal()">タップして確認</div>
+    <p class="fs13 muted text-center" id="reveal-hint">タップしてお題を確認</p>
+    <div class="flex gap8 vcenter mt15">
+      <button class="btn-primary w100" style="padding:10px" onclick="nextReveal()">確認した → 次へ</button>
+    </div>
+    <p class="fs12 muted text-center mt05" id="reveal-progress"></p>
+  </div>
+</div>
+
+<!-- ========== お絵描き ========== -->
+<div id="draw-section" class="section">
+  <div class="card" style="padding:0.85rem">
+    <div class="flex between center mb05">
+      <div>
+        <div style="font-size:22px;font-weight:700" id="draw-turn-name"></div>
+        <div class="fs14 muted" id="draw-round-info"></div>
+      </div>
+      <div class="timer-num" id="draw-timer-num"></div>
+    </div>
+    <div class="timer-bar-wrap"><div class="timer-bar" id="timer-bar" style="width:100%"></div></div>
+
+    <div class="flex gap12 center wrap mb05">
+      <div class="flex gap8 center">
+        <span class="muted fs12">色：</span>
+        <div id="color-btns" class="flex gap8 center"></div>
+      </div>
+      <div class="flex gap8 center">
+        <span class="muted fs12">太さ：</span>
+        <button class="btn-icon" onclick="setSize(3)">細</button>
+        <button class="btn-icon" onclick="setSize(8)">中</button>
+        <button class="btn-icon" onclick="setSize(18)">太</button>
+        <button class="btn-icon" onclick="setEraser()">消しゴム</button>
+        <button class="btn-icon" onclick="clearCanvas()">全消去</button>
+      </div>
+    </div>
+
+    <canvas id="canvas" width="640" height="400"></canvas>
+
+    <div class="text-center mt1">
+      <button class="btn-primary" style="padding:10px 28px" onclick="nextTurn()">描き終わった →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 投票 ========== -->
+<div id="vote-section" class="section">
+  <div class="card">
+    <h2>投票タイム</h2>
+    <p class="fs13 muted mb1">このキャンバスを見て、エセだと思う人に投票しよう！</p>
+    <canvas id="vote-canvas" width="640" height="400" style="max-width:100%;margin-bottom:1rem"></canvas>
+    <div id="vote-rows"></div>
+    <button class="btn-primary w100 mt15" style="padding:11px" onclick="showResult()">結果発表</button>
+  </div>
+</div>
+
+<!-- ========== 結果 ========== -->
+<div id="result-section" class="section">
+  <div class="card">
+    <h2 class="text-center" id="result-title"></h2>
+
+    <div class="result-block">
+      <div class="label">お題</div>
+      <div class="fs22" id="result-topic"></div>
+    </div>
+    <div class="result-block flex gap8 wrap">
+      <div style="flex:1;min-width:120px">
+        <div class="label">エセ</div>
+        <div id="result-ese-list"></div>
+      </div>
+      <div style="flex:1;min-width:120px">
+        <div class="label">本物</div>
+        <div id="result-real-list"></div>
+      </div>
+    </div>
+    <div class="result-block">
+      <div class="label">投票結果 (最多票)</div>
+      <div id="result-vote-outcome"></div>
+    </div>
+
+    <!-- エセ逆転チャンス -->
+    <div id="ese-guess-section" class="result-block" style="display:none">
+      <div class="label">エセの最後のチャンス！お題を当てよう</div>
+      <div id="ese-guesser-names" class="mb05"></div>
+      <div class="flex gap8 mt05">
+        <input type="text" id="ese-guess-input" placeholder="お題を入力" style="flex:1">
+        <button class="btn-primary" onclick="checkEseGuess()">回答</button>
+      </div>
+      <div id="ese-guess-result" class="fs13 mt05"></div>
+    </div>
+
+    <div class="winner-banner" id="final-winner"></div>
+
+    <canvas id="result-canvas" width="640" height="400" style="max-width:100%;margin-bottom:1rem"></canvas>
+    <button class="w100" style="padding:11px" onclick="resetGame()">もう一度プレイ</button>
+  </div>
+</div>
+
+<script>
+/* ===== グローバル状態 ===== */
+let QUESTIONS = {};
+let ALL_CATEGORIES = [];
+let selectedCats = [];
+
+let playerCount   = 4;
+let eseCount      = 1;
+let timePerPlayer = 30;
+let totalRounds   = 2;
+
+let players    = [];
+let eseIndices = [];
+let topic      = '';
+let revealIndex  = 0;
+let revealed     = false;
+let hasRevealed  = false;
+let currentTurn = 0;
+let round       = 1;
+
+let timerInterval = null;
+let timeLeft      = 0;
+
+let drawColor  = '#222222';
+let drawSize   = 6;
+let isEraser   = false;
+let isDrawing  = false;
+let lastX = 0, lastY = 0;
+
+let votes = {};
+
+/* ===== 初期化：JSON読み込み ===== */
+async function loadQuestions() {
+  try {
+    const res = await fetch('questions.json');
+    if (!res.ok) throw new Error('questions.json の読み込みに失敗しました');
+    QUESTIONS = await res.json();
+  } catch(e) {
+    alert('questions.json が読み込めませんでした。\nファイルがindex.htmlと同じフォルダにあるか確認してください。\n（Live Serverなどのローカルサーバー経由で開いてください）');
+    return;
+  }
+  ALL_CATEGORIES = Object.keys(QUESTIONS);
+  selectedCats   = [...ALL_CATEGORIES];
+  renderCats();
+}
+
+/* ===== カウンター操作 ===== */
+function changePlayers(d) {
+  playerCount = Math.min(10, Math.max(3, playerCount + d));
+  document.getElementById('player-count-disp').textContent = playerCount;
+  if (eseCount >= playerCount) { eseCount = playerCount - 1; updateEseDisp(); }
+}
+function changeEse(d) {
+  eseCount = Math.min(playerCount - 1, Math.max(1, eseCount + d));
+  updateEseDisp();
+}
+function changeTime(d)   { timePerPlayer = Math.min(120, Math.max(10, timePerPlayer + d)); document.getElementById('time-disp').textContent   = timePerPlayer; }
+function changeRounds(d) { totalRounds   = Math.min(5,   Math.max(1,  totalRounds   + d)); document.getElementById('rounds-disp').textContent = totalRounds; }
+function updateEseDisp() { document.getElementById('ese-count-disp').textContent = eseCount; }
+
+/* ===== カテゴリ ===== */
+function renderCats() {
+  const el = document.getElementById('cat-list');
+  el.innerHTML = '';
+  ALL_CATEGORIES.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'cat-tag' + (selectedCats.includes(cat) ? ' on' : '');
+    btn.textContent = cat;
+    btn.onclick = () => {
+      if (selectedCats.includes(cat)) selectedCats = selectedCats.filter(c => c !== cat);
+      else selectedCats.push(cat);
+      if (!selectedCats.length) selectedCats = [cat];
+      renderCats();
+    };
+    el.appendChild(btn);
+  });
+}
+
+/* ===== ゲーム開始 ===== */
+function startGame() {
+  players = Array.from({ length: playerCount }, (_, i) => `プレイヤー${i + 1}`);
+
+  const cats = selectedCats.length ? selectedCats : ALL_CATEGORIES;
+  const cat  = cats[Math.floor(Math.random() * cats.length)];
+  const arr  = QUESTIONS[cat];
+  topic = arr[Math.floor(Math.random() * arr.length)];
+
+  const shuffled = [...Array(playerCount).keys()].sort(() => Math.random() - 0.5);
+  eseIndices = shuffled.slice(0, eseCount);
+
+  revealIndex = 0; revealed = false; hasRevealed = false;
+  show('reveal-section');
+  showReveal();
+}
+
+/* ===== お題確認フェーズ ===== */
+function showReveal() {
+  const isEse = eseIndices.includes(revealIndex);
+  document.getElementById('reveal-name-label').textContent = `${players[revealIndex]} さんの番`;
+  const topicEl = document.getElementById('reveal-topic');
+  topicEl.className = 'topic-box blurred';
+  topicEl.textContent = isEse ? 'あなたはエセです！' : topic;
+  document.getElementById('reveal-hint').textContent = 'タップしてお題を確認';
+  document.getElementById('reveal-progress').textContent = `${revealIndex + 1} / ${playerCount} 人`;
+  revealed = false;
+  hasRevealed = false;
+}
+
+function toggleReveal() {
+  revealed = !revealed;
+  if (revealed) hasRevealed = true;
+  const topicEl = document.getElementById('reveal-topic');
+  const hintEl  = document.getElementById('reveal-hint');
+  if (revealed) {
+    topicEl.classList.remove('blurred');
+    hintEl.textContent = '確認したら隠してから次へ進んでください';
+  } else {
+    topicEl.classList.add('blurred');
+    hintEl.textContent = 'タップしてお題を確認';
+  }
+}
+
+function nextReveal() {
+  if (revealed) { alert('お題を隠してから次へ進んでください'); return; }
+  if (!hasRevealed) { alert('お題を確認してから次へ進んでください'); return; }
+  revealIndex++;
+  if (revealIndex >= playerCount) { startDraw(); }
+  else { showReveal(); }
+}
+
+/* ===== お絵描きフェーズ ===== */
+function startDraw() {
+  currentTurn = 0; round = 1;
+  initCanvas();
+  show('draw-section');
+  showTurn();
+}
+
+function initCanvas() {
+  const canvas = document.getElementById('canvas');
+  const ctx    = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  setupCanvasEvents(canvas, ctx);
+  renderColorBtns();
+}
+
+function setupCanvasEvents(canvas, ctx) {
+  ctx.lineCap  = 'round';
+  ctx.lineJoin = 'round';
+
+  const pos = (e, r) => ({ x: e.clientX - r.left, y: e.clientY - r.top });
+
+  canvas.onmousedown = e => {
+    isDrawing = true;
+    const r = canvas.getBoundingClientRect();
+    const scaleX = canvas.width  / r.width;
+    const scaleY = canvas.height / r.height;
+    lastX = (e.clientX - r.left) * scaleX;
+    lastY = (e.clientY - r.top)  * scaleY;
+    dot(ctx, lastX, lastY);
+  };
+  canvas.onmousemove = e => {
+    if (!isDrawing) return;
+    const r = canvas.getBoundingClientRect();
+    const scaleX = canvas.width  / r.width;
+    const scaleY = canvas.height / r.height;
+    const x = (e.clientX - r.left) * scaleX;
+    const y = (e.clientY - r.top)  * scaleY;
+    stroke(ctx, x, y);
+  };
+  canvas.onmouseup = canvas.onmouseleave = () => { isDrawing = false; };
+
+  canvas.ontouchstart = e => {
+    e.preventDefault();
+    isDrawing = true;
+    const r  = canvas.getBoundingClientRect();
+    const t  = e.touches[0];
+    const scaleX = canvas.width  / r.width;
+    const scaleY = canvas.height / r.height;
+    lastX = (t.clientX - r.left) * scaleX;
+    lastY = (t.clientY - r.top)  * scaleY;
+    dot(ctx, lastX, lastY);
+  };
+  canvas.ontouchmove = e => {
+    e.preventDefault();
+    if (!isDrawing) return;
+    const r  = canvas.getBoundingClientRect();
+    const t  = e.touches[0];
+    const scaleX = canvas.width  / r.width;
+    const scaleY = canvas.height / r.height;
+    const x = (t.clientX - r.left) * scaleX;
+    const y = (t.clientY - r.top)  * scaleY;
+    stroke(ctx, x, y);
+  };
+  canvas.ontouchend = () => { isDrawing = false; };
+}
+
+function dot(ctx, x, y) {
+  ctx.beginPath();
+  ctx.arc(x, y, (isEraser ? drawSize * 2 : drawSize) / 2, 0, Math.PI * 2);
+  ctx.fillStyle = isEraser ? '#ffffff' : drawColor;
+  ctx.fill();
+}
+
+function stroke(ctx, x, y) {
+  ctx.beginPath();
+  ctx.moveTo(lastX, lastY);
+  ctx.lineTo(x, y);
+  ctx.strokeStyle  = isEraser ? '#ffffff' : drawColor;
+  ctx.lineWidth    = isEraser ? drawSize * 2 : drawSize;
+  ctx.stroke();
+  lastX = x; lastY = y;
+}
+
+const PLAYER_COLORS = [
+  '#e24b4a','#378add','#1D9E75','#EF9F27',
+  '#D4537E','#7B5EA7','#2AABB8','#888780',
+  '#C47A2B','#4a7a1a'
+];
+
+function renderColorBtns() {
+  const colors = ['#1a1a18','#e24b4a','#378add','#1D9E75','#EF9F27','#D4537E','#7B5EA7','#2AABB8','#888780','#ffffff'];
+  const el = document.getElementById('color-btns');
+  el.innerHTML = '';
+  colors.forEach(c => {
+    const d = document.createElement('div');
+    d.className = 'color-dot' + (!isEraser && c === drawColor ? ' active' : '');
+    d.style.background = c;
+    d.style.border = c === '#ffffff' ? '1.5px solid #ccc' : '2px solid transparent';
+    d.onclick = () => { drawColor = c; isEraser = false; renderColorBtns(); };
+    el.appendChild(d);
+  });
+}
+
+function setSize(s)  { drawSize = s; isEraser = false; renderColorBtns(); }
+function setEraser() { isEraser = true; drawSize = 18; renderColorBtns(); }
+function clearCanvas() {
+  const c = document.getElementById('canvas');
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, c.width, c.height);
+}
+
+function showTurn() {
+  drawColor = PLAYER_COLORS[currentTurn % PLAYER_COLORS.length];
+  isEraser = false;
+  document.getElementById('draw-turn-name').textContent = `${players[currentTurn]} さんの番`;
+  document.getElementById('draw-round-info').textContent = `第${round}ラウンド (${currentTurn + 1} / ${playerCount} 人目)`;
+  renderColorBtns();
+  startTimer();
+}
+
+function startTimer() {
+  clearInterval(timerInterval);
+  timeLeft = timePerPlayer;
+  const bar = document.getElementById('timer-bar');
+  const num = document.getElementById('draw-timer-num');
+  bar.style.width = '100%';
+  bar.style.background = 'var(--c-timer-ok)';
+  num.textContent = timeLeft;
+
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    num.textContent = timeLeft;
+    const pct = timeLeft / timePerPlayer * 100;
+    bar.style.width = pct + '%';
+    bar.style.background = pct > 60 ? 'var(--c-timer-ok)' : pct > 30 ? 'var(--c-timer-mid)' : 'var(--c-timer-low)';
+    if (timeLeft <= 0) { clearInterval(timerInterval); bar.style.width = '0%'; }
+  }, 1000);
+}
+
+function nextTurn() {
+  clearInterval(timerInterval);
+  currentTurn++;
+  if (currentTurn >= playerCount) {
+    if (round >= totalRounds) { goToVote(); }
+    else { round++; currentTurn = 0; showTurn(); }
+  } else { showTurn(); }
+}
+
+/* ===== 投票フェーズ ===== */
+function goToVote() {
+  clearInterval(timerInterval);
+  copyCanvas('canvas', 'vote-canvas');
+  votes = {};
+  const el = document.getElementById('vote-rows');
+  el.innerHTML = '';
+  players.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'vote-row';
+    row.innerHTML = `
+      <span class="vote-name">${p}</span>
+      <button class="btn-ese" onclick="vote(${i}, 'ese', this)">エセ</button>
+      <button class="btn-real" onclick="vote(${i}, 'real', this)">本物</button>`;
+    el.appendChild(row);
+  });
+  show('vote-section');
+}
+
+function vote(idx, type, btn) {
+  votes[idx] = type;
+  const row  = btn.parentElement;
+  row.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+/* ===== 結果フェーズ ===== */
+function showResult() {
+  const eseNames  = eseIndices.map(i => players[i]);
+  const realNames = players.filter((_, i) => !eseIndices.includes(i));
+
+  // エセ票集計
+  const eseVotes = {};
+  Object.entries(votes).forEach(([idx, type]) => {
+    if (type === 'ese') eseVotes[idx] = (eseVotes[idx] || 0) + 1;
+  });
+  const sorted   = Object.entries(eseVotes).sort((a, b) => b[1] - a[1]);
+  const topVote  = sorted.length ? sorted[0] : null;
+  const topIdx   = topVote ? parseInt(topVote[0]) : -1;
+  const realWon  = topIdx >= 0 && eseIndices.includes(topIdx);
+
+  document.getElementById('result-topic').textContent = topic;
+  document.getElementById('result-ese-list').innerHTML  = eseNames.map(n  => `<span class="chip chip-ese">${n}</span> `).join('');
+  document.getElementById('result-real-list').innerHTML = realNames.map(n => `<span class="chip chip-real">${n}</span> `).join('');
+
+  if (topVote) {
+    const n    = players[topIdx];
+    const cls  = eseIndices.includes(topIdx) ? 'chip-ese' : 'chip-real';
+    document.getElementById('result-vote-outcome').innerHTML = `<span class="chip ${cls}">${n}</span> が最多票 (${topVote[1]}票)`;
+  } else {
+    document.getElementById('result-vote-outcome').textContent = '票が入りませんでした';
+  }
+
+  const guessSection = document.getElementById('ese-guess-section');
+  const winnerEl     = document.getElementById('final-winner');
+
+  if (realWon) {
+    document.getElementById('result-title').textContent = 'エセが見つかった！最後のチャンス';
+    document.getElementById('ese-guesser-names').innerHTML = eseNames.map(n => `<span class="chip chip-ese">${n}</span> `).join('');
+    document.getElementById('ese-guess-input').value = '';
+    document.getElementById('ese-guess-result').textContent = '';
+    guessSection.style.display = 'block';
+    winnerEl.textContent = '';
+    winnerEl.className   = 'winner-banner';
+  } else {
+    guessSection.style.display = 'none';
+    winnerEl.textContent = '🎉 エセの勝利！本物を欺き切りました';
+    winnerEl.className   = 'winner-banner winner-ese';
+  }
+
+  copyCanvas('canvas', 'result-canvas');
+  show('result-section');
+}
+
+function checkEseGuess() {
+  const guess  = document.getElementById('ese-guess-input').value.trim();
+  const resEl  = document.getElementById('ese-guess-result');
+  const winEl  = document.getElementById('final-winner');
+  if (!guess) { alert('お題を入力してください'); return; }
+  if (guess === topic) {
+    resEl.textContent  = `🎉 正解！エセの勝利！`;
+    resEl.style.color  = 'var(--c-ese)';
+    winEl.textContent  = '🎉 エセが正解！エセチームの勝ち！';
+    winEl.className    = 'winner-banner winner-ese';
+  } else {
+    resEl.textContent  = `不正解… 正解は「${topic}」でした。本物チームの勝ち！`;
+    resEl.style.color  = 'var(--c-real)';
+    winEl.textContent  = '🏆 本物チームの勝利！';
+    winEl.className    = 'winner-banner winner-real';
+  }
+}
+
+/* ===== ユーティリティ ===== */
+function copyCanvas(srcId, dstId) {
+  const src = document.getElementById(srcId);
+  const dst = document.getElementById(dstId);
+  dst.getContext('2d').drawImage(src, 0, 0);
+}
+
+function show(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function resetGame() {
+  clearInterval(timerInterval);
+  document.getElementById('ese-guess-input').value  = '';
+  document.getElementById('ese-guess-result').textContent = '';
+  document.getElementById('final-winner').textContent     = '';
+  document.getElementById('final-winner').className       = 'winner-banner';
+  show('setup-section');
+}
+
+/* ===== 起動 ===== */
+loadQuestions();
+</script>
+</body>
+</html>
