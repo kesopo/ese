@@ -223,7 +223,12 @@ button:active { transform: scale(0.97); }
   align-items: center;
   justify-content: center;
 }
-.topic-box.blurred { filter: blur(20px); }
+.topic-box.blurred {
+  filter: blur(10px);
+  background-image: radial-gradient(#000 10%, transparent 10%);
+  background-size: 5px 5px;
+  color: transparent;
+}
 
 /* ===== キャンバス ===== */
 #canvas, #vote-canvas, #result-canvas {
