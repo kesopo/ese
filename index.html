@@ -23,7 +23,7 @@
     <div class="label">プレイヤー人数</div>
     <div class="counter mb1">
       <button onclick="changePlayers(-1)">－</button>
-      <span class="counter-val" id="player-count-disp">4</span>
+      <span class="counter-val" id="player-count-disp">3</span>
       <button onclick="changePlayers(1)">＋</button>
       <span class="muted fs13">人 (3〜10)</span>
     </div>
@@ -59,7 +59,11 @@
     </div>
 
     <div class="mt15">
-      <div class="label mb05">カテゴリ (複数選択可)</div>
+      <div class="flex center gap8 mb05">
+        <div class="label" style="margin:0">カテゴリ (複数選択可)</div>
+        <button class="cat-all-btn" onclick="selectAllCats(true)">全選択</button>
+        <button class="cat-all-btn" onclick="selectAllCats(false)">全解除</button>
+      </div>
       <div class="flex gap4 wrap" id="cat-list"></div>
     </div>
 
@@ -70,39 +74,52 @@
 <!-- ========== お題確認 ========== -->
 <div id="reveal-section" class="section">
   <div class="card">
-    <div style="font-size:20px;font-weight:700;margin-bottom:0.5rem" id="reveal-name-label"></div>
-    <div class="topic-box blurred" id="reveal-topic" onclick="toggleReveal()">タップして確認</div>
-    <p class="fs13 muted text-center" id="reveal-hint">タップしてお題を確認</p>
-    <div class="flex gap8 vcenter mt15">
-      <button class="btn-primary w100" style="padding:10px" onclick="nextReveal()">確認した → 次へ</button>
+    <!-- プレイヤーバナー -->
+    <div class="player-banner">
+      <span class="player-banner-name" id="reveal-name-label"></span>
+      <span class="player-banner-progress" id="reveal-progress"></span>
     </div>
-    <p class="fs12 muted text-center mt05" id="reveal-progress"></p>
+    <!-- 進行ドット -->
+    <div class="progress-dots" id="reveal-dots"></div>
+
+    <!-- お題ボックス：常に同じテキストを表示、内容は不可視 -->
+    <div class="topic-box" id="reveal-topic" onclick="toggleReveal()">ここをタップして確認</div>
+    <p class="fs13 muted text-center mb1" id="reveal-hint"></p>
+
+    <button class="btn-primary w100" style="padding:10px" onclick="nextReveal()">確認した → 次へ</button>
   </div>
 </div>
 
 <!-- ========== お絵描き ========== -->
 <div id="draw-section" class="section">
   <div class="card" style="padding:0.85rem">
-    <div class="flex between center mb05">
-      <div>
-        <div style="font-size:22px;font-weight:700" id="draw-turn-name"></div>
-        <div class="fs14 muted" id="draw-round-info"></div>
+    <!-- プレイヤーバナー -->
+    <div class="player-banner">
+      <span class="player-banner-name" id="draw-turn-name"></span>
+      <div class="flex center gap8">
+        <div class="timer-num" id="draw-timer-num"></div>
+        <span class="player-banner-progress" id="draw-round-info"></span>
       </div>
-      <div class="timer-num" id="draw-timer-num"></div>
     </div>
+    <!-- 進行ドット -->
+    <div class="progress-dots" id="draw-dots"></div>
+
     <div class="timer-bar-wrap"><div class="timer-bar" id="timer-bar" style="width:100%"></div></div>
 
-    <div class="flex gap12 center wrap mb05">
-      <div class="flex gap8 center">
-        <span class="muted fs12">色：</span>
-        <div id="color-btns" class="flex gap8 center"></div>
-      </div>
-      <div class="flex gap8 center">
-        <span class="muted fs12">太さ：</span>
+    <!-- ツールバー -->
+    <div class="flex gap8 center wrap mb05" style="row-gap:6px">
+      <!-- 現在色インジケーター -->
+      <div class="color-current" id="color-current"></div>
+      <!-- 色選択 -->
+      <div id="color-btns" class="flex gap8 center wrap"></div>
+      <!-- 太さ・ツール -->
+      <div class="flex gap4 center wrap">
         <button class="btn-icon" onclick="setSize(3)">細</button>
         <button class="btn-icon" onclick="setSize(8)">中</button>
         <button class="btn-icon" onclick="setSize(18)">太</button>
         <button class="btn-icon" onclick="setEraser()">消しゴム</button>
+        <button class="btn-icon" id="undo-btn" onclick="undo()" disabled>↩ 戻す</button>
+        <button class="btn-icon" id="redo-btn" onclick="redo()" disabled>進む ↪</button>
         <button class="btn-icon" onclick="clearCanvas()">全消去</button>
       </div>
     </div>
@@ -131,11 +148,12 @@
   <div class="card">
     <h2 class="text-center" id="result-title"></h2>
 
-    <div class="result-block">
+    <!-- エセ回答中は隠す -->
+    <div id="result-topic-block" class="result-block">
       <div class="label">お題</div>
       <div class="fs22" id="result-topic"></div>
     </div>
-    <div class="result-block flex gap8 wrap">
+    <div id="result-teams-block" class="result-block flex gap8 wrap">
       <div style="flex:1;min-width:120px">
         <div class="label">エセ</div>
         <div id="result-ese-list"></div>
@@ -170,11 +188,11 @@
 
 <script>
 /* ===== グローバル状態 ===== */
-let QUESTIONS = {};
+let QUESTIONS      = {};
 let ALL_CATEGORIES = [];
-let selectedCats = [];
+let selectedCats   = [];
 
-let playerCount   = 4;
+let playerCount   = 3;
 let eseCount      = 1;
 let timePerPlayer = 30;
 let totalRounds   = 2;
@@ -182,20 +200,25 @@ let totalRounds   = 2;
 let players    = [];
 let eseIndices = [];
 let topic      = '';
-let revealIndex  = 0;
-let revealed     = false;
-let hasRevealed  = false;
+let revealIndex = 0;
+let revealed    = false;
+let hasRevealed = false;
 let currentTurn = 0;
 let round       = 1;
 
 let timerInterval = null;
 let timeLeft      = 0;
 
-let drawColor  = '#222222';
-let drawSize   = 6;
-let isEraser   = false;
-let isDrawing  = false;
+let drawColor = '#222222';
+let drawSize  = 6;
+let isEraser  = false;
+let isDrawing = false;
 let lastX = 0, lastY = 0;
+
+// undo/redo スタック（ImageData を保持）
+let undoStack = [];
+let redoStack = [];
+const MAX_HISTORY = 40;
 
 let votes = {};
 
@@ -203,10 +226,10 @@ let votes = {};
 async function loadQuestions() {
   try {
     const res = await fetch('questions.json');
-    if (!res.ok) throw new Error('questions.json の読み込みに失敗しました');
+    if (!res.ok) throw new Error();
     QUESTIONS = await res.json();
   } catch(e) {
-    alert('questions.json が読み込めませんでした。\nファイルがindex.htmlと同じフォルダにあるか確認してください。\n（Live Serverなどのローカルサーバー経由で開いてください）');
+    alert('questions.json が読み込めませんでした。\nindex.html と同じフォルダにあるか確認してください。\n（Live Server経由で開いてください）');
     return;
   }
   ALL_CATEGORIES = Object.keys(QUESTIONS);
@@ -229,6 +252,11 @@ function changeRounds(d) { totalRounds   = Math.min(5,   Math.max(1,  totalRound
 function updateEseDisp() { document.getElementById('ese-count-disp').textContent = eseCount; }
 
 /* ===== カテゴリ ===== */
+function selectAllCats(flag) {
+  selectedCats = flag ? [...ALL_CATEGORIES] : [];
+  if (!flag && ALL_CATEGORIES.length) selectedCats = []; // 全解除は本当に空に
+  renderCats();
+}
 function renderCats() {
   const el = document.getElementById('cat-list');
   el.innerHTML = '';
@@ -239,7 +267,7 @@ function renderCats() {
     btn.onclick = () => {
       if (selectedCats.includes(cat)) selectedCats = selectedCats.filter(c => c !== cat);
       else selectedCats.push(cat);
-      if (!selectedCats.length) selectedCats = [cat];
+      if (!selectedCats.length) selectedCats = [cat]; // 最低1つ残す
       renderCats();
     };
     el.appendChild(btn);
@@ -248,12 +276,12 @@ function renderCats() {
 
 /* ===== ゲーム開始 ===== */
 function startGame() {
+  if (!ALL_CATEGORIES.length) { alert('お題データが読み込まれていません。'); return; }
   players = Array.from({ length: playerCount }, (_, i) => `プレイヤー${i + 1}`);
 
   const cats = selectedCats.length ? selectedCats : ALL_CATEGORIES;
   const cat  = cats[Math.floor(Math.random() * cats.length)];
-  const arr  = QUESTIONS[cat];
-  topic = arr[Math.floor(Math.random() * arr.length)];
+  topic = QUESTIONS[cat][Math.floor(Math.random() * QUESTIONS[cat].length)];
 
   const shuffled = [...Array(playerCount).keys()].sort(() => Math.random() - 0.5);
   eseIndices = shuffled.slice(0, eseCount);
@@ -264,16 +292,31 @@ function startGame() {
 }
 
 /* ===== お題確認フェーズ ===== */
+function renderRevealDots() {
+  const el = document.getElementById('reveal-dots');
+  el.innerHTML = '';
+  for (let i = 0; i < playerCount; i++) {
+    const d = document.createElement('div');
+    d.className = 'progress-dot' + (i < revealIndex ? ' done' : i === revealIndex ? ' current' : '');
+    el.appendChild(d);
+  }
+}
+
 function showReveal() {
-  const isEse = eseIndices.includes(revealIndex);
-  document.getElementById('reveal-name-label').textContent = `${players[revealIndex]} さんの番`;
+  document.getElementById('reveal-name-label').textContent  = `${players[revealIndex]} さん`;
+  document.getElementById('reveal-progress').textContent    = `${revealIndex + 1} / ${playerCount} 人`;
+  renderRevealDots();
+
+  // お題ボックスは常に同じ見た目・テキスト（エセかどうか不明）
   const topicEl = document.getElementById('reveal-topic');
-  topicEl.className = 'topic-box blurred';
-  topicEl.textContent = isEse ? 'あなたはエセです！' : topic;
-  document.getElementById('reveal-hint').textContent = 'タップしてお題を確認';
-  document.getElementById('reveal-progress').textContent = `${revealIndex + 1} / ${playerCount} 人`;
-  revealed = false;
-  hasRevealed = false;
+  topicEl.className   = 'topic-box';          // 常にぼかし無し・統一テキスト
+  topicEl.textContent = 'ここをタップして確認';
+  topicEl.style.fontSize   = '';
+  topicEl.style.fontWeight = '';
+  topicEl.style.color      = '';
+
+  document.getElementById('reveal-hint').textContent = '';
+  revealed = false; hasRevealed = false;
 }
 
 function toggleReveal() {
@@ -281,17 +324,27 @@ function toggleReveal() {
   if (revealed) hasRevealed = true;
   const topicEl = document.getElementById('reveal-topic');
   const hintEl  = document.getElementById('reveal-hint');
+  const isEse   = eseIndices.includes(revealIndex);
+
   if (revealed) {
-    topicEl.classList.remove('blurred');
-    hintEl.textContent = '確認したら隠してから次へ進んでください';
+    // 内容を表示
+    topicEl.className   = 'topic-box revealed';
+    topicEl.textContent = isEse ? 'あなたはエセです！' : topic;
+    hintEl.textContent  = '確認したら隠してから次へ進んでください';
   } else {
-    topicEl.classList.add('blurred');
-    hintEl.textContent = 'タップしてお題を確認';
+    // 再度隠す（統一テキストに戻す）
+    topicEl.className   = 'topic-box';
+    topicEl.textContent = 'ここをタップして隠す';
+    hintEl.textContent  = '';
+    // 少し待って元テキストに戻す（隠した後も操作性を保つため）
+    setTimeout(() => {
+      if (!revealed) topicEl.textContent = 'ここをタップして確認';
+    }, 1200);
   }
 }
 
 function nextReveal() {
-  if (revealed) { alert('お題を隠してから次へ進んでください'); return; }
+  if (revealed)     { alert('お題を隠してから次へ進んでください'); return; }
   if (!hasRevealed) { alert('お題を確認してから次へ進んでください'); return; }
   revealIndex++;
   if (revealIndex >= playerCount) { startDraw(); }
@@ -301,6 +354,7 @@ function nextReveal() {
 /* ===== お絵描きフェーズ ===== */
 function startDraw() {
   currentTurn = 0; round = 1;
+  undoStack = []; redoStack = [];
   initCanvas();
   show('draw-section');
   showTurn();
@@ -311,59 +365,91 @@ function initCanvas() {
   const ctx    = canvas.getContext('2d');
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+  pushUndo();
   setupCanvasEvents(canvas, ctx);
-  renderColorBtns();
+}
+
+function saveCanvasState() {
+  const canvas = document.getElementById('canvas');
+  const ctx    = canvas.getContext('2d');
+  undoStack.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+  if (undoStack.length > MAX_HISTORY) undoStack.shift();
+  redoStack = [];
+  updateHistoryBtns();
+}
+
+function pushUndo() {
+  const canvas = document.getElementById('canvas');
+  const ctx    = canvas.getContext('2d');
+  undoStack.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+  if (undoStack.length > MAX_HISTORY) undoStack.shift();
+  updateHistoryBtns();
+}
+
+function undo() {
+  if (undoStack.length <= 1) return;
+  const canvas = document.getElementById('canvas');
+  const ctx    = canvas.getContext('2d');
+  redoStack.push(undoStack.pop());
+  ctx.putImageData(undoStack[undoStack.length - 1], 0, 0);
+  updateHistoryBtns();
+}
+
+function redo() {
+  if (!redoStack.length) return;
+  const canvas = document.getElementById('canvas');
+  const ctx    = canvas.getContext('2d');
+  const state  = redoStack.pop();
+  undoStack.push(state);
+  ctx.putImageData(state, 0, 0);
+  updateHistoryBtns();
+}
+
+function updateHistoryBtns() {
+  document.getElementById('undo-btn').disabled = undoStack.length <= 1;
+  document.getElementById('redo-btn').disabled = redoStack.length === 0;
 }
 
 function setupCanvasEvents(canvas, ctx) {
   ctx.lineCap  = 'round';
   ctx.lineJoin = 'round';
 
-  const pos = (e, r) => ({ x: e.clientX - r.left, y: e.clientY - r.top });
-
   canvas.onmousedown = e => {
     isDrawing = true;
     const r = canvas.getBoundingClientRect();
-    const scaleX = canvas.width  / r.width;
-    const scaleY = canvas.height / r.height;
-    lastX = (e.clientX - r.left) * scaleX;
-    lastY = (e.clientY - r.top)  * scaleY;
+    lastX = (e.clientX - r.left) * (canvas.width  / r.width);
+    lastY = (e.clientY - r.top)  * (canvas.height / r.height);
     dot(ctx, lastX, lastY);
   };
   canvas.onmousemove = e => {
     if (!isDrawing) return;
     const r = canvas.getBoundingClientRect();
-    const scaleX = canvas.width  / r.width;
-    const scaleY = canvas.height / r.height;
-    const x = (e.clientX - r.left) * scaleX;
-    const y = (e.clientY - r.top)  * scaleY;
+    const x = (e.clientX - r.left) * (canvas.width  / r.width);
+    const y = (e.clientY - r.top)  * (canvas.height / r.height);
     stroke(ctx, x, y);
   };
-  canvas.onmouseup = canvas.onmouseleave = () => { isDrawing = false; };
+  canvas.onmouseup = () => { if (isDrawing) { isDrawing = false; pushUndo(); } };
+  canvas.onmouseleave = () => { if (isDrawing) { isDrawing = false; pushUndo(); } };
 
   canvas.ontouchstart = e => {
     e.preventDefault();
     isDrawing = true;
-    const r  = canvas.getBoundingClientRect();
-    const t  = e.touches[0];
-    const scaleX = canvas.width  / r.width;
-    const scaleY = canvas.height / r.height;
-    lastX = (t.clientX - r.left) * scaleX;
-    lastY = (t.clientY - r.top)  * scaleY;
+    const r = canvas.getBoundingClientRect();
+    const t = e.touches[0];
+    lastX = (t.clientX - r.left) * (canvas.width  / r.width);
+    lastY = (t.clientY - r.top)  * (canvas.height / r.height);
     dot(ctx, lastX, lastY);
   };
   canvas.ontouchmove = e => {
     e.preventDefault();
     if (!isDrawing) return;
-    const r  = canvas.getBoundingClientRect();
-    const t  = e.touches[0];
-    const scaleX = canvas.width  / r.width;
-    const scaleY = canvas.height / r.height;
-    const x = (t.clientX - r.left) * scaleX;
-    const y = (t.clientY - r.top)  * scaleY;
+    const r = canvas.getBoundingClientRect();
+    const t = e.touches[0];
+    const x = (t.clientX - r.left) * (canvas.width  / r.width);
+    const y = (t.clientY - r.top)  * (canvas.height / r.height);
     stroke(ctx, x, y);
   };
-  canvas.ontouchend = () => { isDrawing = false; };
+  canvas.ontouchend = () => { if (isDrawing) { isDrawing = false; pushUndo(); } };
 }
 
 function dot(ctx, x, y) {
@@ -377,8 +463,8 @@ function stroke(ctx, x, y) {
   ctx.beginPath();
   ctx.moveTo(lastX, lastY);
   ctx.lineTo(x, y);
-  ctx.strokeStyle  = isEraser ? '#ffffff' : drawColor;
-  ctx.lineWidth    = isEraser ? drawSize * 2 : drawSize;
+  ctx.strokeStyle = isEraser ? '#ffffff' : drawColor;
+  ctx.lineWidth   = isEraser ? drawSize * 2 : drawSize;
   ctx.stroke();
   lastX = x; lastY = y;
 }
@@ -398,26 +484,53 @@ function renderColorBtns() {
     d.className = 'color-dot' + (!isEraser && c === drawColor ? ' active' : '');
     d.style.background = c;
     d.style.border = c === '#ffffff' ? '1.5px solid #ccc' : '2px solid transparent';
-    d.onclick = () => { drawColor = c; isEraser = false; renderColorBtns(); };
+    d.onclick = () => { drawColor = c; isEraser = false; renderColorBtns(); updateColorCurrent(); };
     el.appendChild(d);
   });
+  updateColorCurrent();
+}
+
+function updateColorCurrent() {
+  const el = document.getElementById('color-current');
+  if (isEraser) {
+    el.style.background = '#ffffff';
+    el.style.backgroundImage = 'repeating-linear-gradient(45deg,#ccc 0,#ccc 2px,transparent 0,transparent 50%)';
+    el.style.backgroundSize = '6px 6px';
+    el.title = '消しゴム';
+  } else {
+    el.style.background = drawColor;
+    el.style.backgroundImage = '';
+    el.title = '';
+  }
 }
 
 function setSize(s)  { drawSize = s; isEraser = false; renderColorBtns(); }
 function setEraser() { isEraser = true; drawSize = 18; renderColorBtns(); }
 function clearCanvas() {
-  const c = document.getElementById('canvas');
+  const c   = document.getElementById('canvas');
   const ctx = c.getContext('2d');
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, c.width, c.height);
+  pushUndo();
+}
+
+function renderDrawDots() {
+  const el = document.getElementById('draw-dots');
+  el.innerHTML = '';
+  for (let i = 0; i < playerCount; i++) {
+    const d = document.createElement('div');
+    d.className = 'progress-dot' + (i < currentTurn ? ' done' : i === currentTurn ? ' current' : '');
+    el.appendChild(d);
+  }
 }
 
 function showTurn() {
   drawColor = PLAYER_COLORS[currentTurn % PLAYER_COLORS.length];
-  isEraser = false;
-  document.getElementById('draw-turn-name').textContent = `${players[currentTurn]} さんの番`;
-  document.getElementById('draw-round-info').textContent = `第${round}ラウンド (${currentTurn + 1} / ${playerCount} 人目)`;
+  isEraser  = false;
+  document.getElementById('draw-turn-name').textContent  = `${players[currentTurn]} さんの番`;
+  document.getElementById('draw-round-info').textContent = `第${round}R (${currentTurn + 1}/${playerCount})`;
   renderColorBtns();
+  renderDrawDots();
   startTimer();
 }
 
@@ -426,15 +539,15 @@ function startTimer() {
   timeLeft = timePerPlayer;
   const bar = document.getElementById('timer-bar');
   const num = document.getElementById('draw-timer-num');
-  bar.style.width = '100%';
+  bar.style.width      = '100%';
   bar.style.background = 'var(--c-timer-ok)';
-  num.textContent = timeLeft;
+  num.textContent      = timeLeft;
 
   timerInterval = setInterval(() => {
     timeLeft--;
-    num.textContent = timeLeft;
-    const pct = timeLeft / timePerPlayer * 100;
-    bar.style.width = pct + '%';
+    num.textContent      = timeLeft;
+    const pct            = timeLeft / timePerPlayer * 100;
+    bar.style.width      = pct + '%';
     bar.style.background = pct > 60 ? 'var(--c-timer-ok)' : pct > 30 ? 'var(--c-timer-mid)' : 'var(--c-timer-low)';
     if (timeLeft <= 0) { clearInterval(timerInterval); bar.style.width = '0%'; }
   }, 1000);
@@ -480,23 +593,22 @@ function showResult() {
   const eseNames  = eseIndices.map(i => players[i]);
   const realNames = players.filter((_, i) => !eseIndices.includes(i));
 
-  // エセ票集計
   const eseVotes = {};
   Object.entries(votes).forEach(([idx, type]) => {
     if (type === 'ese') eseVotes[idx] = (eseVotes[idx] || 0) + 1;
   });
-  const sorted   = Object.entries(eseVotes).sort((a, b) => b[1] - a[1]);
-  const topVote  = sorted.length ? sorted[0] : null;
-  const topIdx   = topVote ? parseInt(topVote[0]) : -1;
-  const realWon  = topIdx >= 0 && eseIndices.includes(topIdx);
+  const sorted  = Object.entries(eseVotes).sort((a, b) => b[1] - a[1]);
+  const topVote = sorted.length ? sorted[0] : null;
+  const topIdx  = topVote ? parseInt(topVote[0]) : -1;
+  const realWon = topIdx >= 0 && eseIndices.includes(topIdx);
 
-  document.getElementById('result-topic').textContent = topic;
+  document.getElementById('result-topic').textContent   = topic;
   document.getElementById('result-ese-list').innerHTML  = eseNames.map(n  => `<span class="chip chip-ese">${n}</span> `).join('');
   document.getElementById('result-real-list').innerHTML = realNames.map(n => `<span class="chip chip-real">${n}</span> `).join('');
 
   if (topVote) {
-    const n    = players[topIdx];
-    const cls  = eseIndices.includes(topIdx) ? 'chip-ese' : 'chip-real';
+    const n   = players[topIdx];
+    const cls = eseIndices.includes(topIdx) ? 'chip-ese' : 'chip-real';
     document.getElementById('result-vote-outcome').innerHTML = `<span class="chip ${cls}">${n}</span> が最多票 (${topVote[1]}票)`;
   } else {
     document.getElementById('result-vote-outcome').textContent = '票が入りませんでした';
@@ -508,11 +620,15 @@ function showResult() {
   if (realWon) {
     document.getElementById('result-title').textContent = 'エセが見つかった！最後のチャンス';
     document.getElementById('ese-guesser-names').innerHTML = eseNames.map(n => `<span class="chip chip-ese">${n}</span> `).join('');
-    document.getElementById('ese-guess-input').value = '';
+    document.getElementById('ese-guess-input').value        = '';
     document.getElementById('ese-guess-result').textContent = '';
     guessSection.style.display = 'block';
     winnerEl.textContent = '';
     winnerEl.className   = 'winner-banner';
+
+    // エセ回答中はお題・チーム情報を隠す
+    document.getElementById('result-topic-block').classList.add('topic-hidden');
+    document.getElementById('result-teams-block').classList.add('topic-hidden');
   } else {
     guessSection.style.display = 'none';
     winnerEl.textContent = '🎉 エセの勝利！本物を欺き切りました';
@@ -524,20 +640,25 @@ function showResult() {
 }
 
 function checkEseGuess() {
-  const guess  = document.getElementById('ese-guess-input').value.trim();
-  const resEl  = document.getElementById('ese-guess-result');
-  const winEl  = document.getElementById('final-winner');
+  const guess = document.getElementById('ese-guess-input').value.trim();
+  const resEl = document.getElementById('ese-guess-result');
+  const winEl = document.getElementById('final-winner');
   if (!guess) { alert('お題を入力してください'); return; }
+
+  // 回答後はお題・チーム情報を表示する
+  document.getElementById('result-topic-block').classList.remove('topic-hidden');
+  document.getElementById('result-teams-block').classList.remove('topic-hidden');
+
   if (guess === topic) {
-    resEl.textContent  = `🎉 正解！エセの勝利！`;
-    resEl.style.color  = 'var(--c-ese)';
-    winEl.textContent  = '🎉 エセが正解！エセチームの勝ち！';
-    winEl.className    = 'winner-banner winner-ese';
+    resEl.textContent = '🎉 正解！エセの勝利！';
+    resEl.style.color = 'var(--c-ese)';
+    winEl.textContent = '🎉 エセが正解！エセチームの勝ち！';
+    winEl.className   = 'winner-banner winner-ese';
   } else {
-    resEl.textContent  = `不正解… 正解は「${topic}」でした。本物チームの勝ち！`;
-    resEl.style.color  = 'var(--c-real)';
-    winEl.textContent  = '🏆 本物チームの勝利！';
-    winEl.className    = 'winner-banner winner-real';
+    resEl.textContent = `不正解… 正解は「${topic}」でした。本物チームの勝ち！`;
+    resEl.style.color = 'var(--c-real)';
+    winEl.textContent = '🏆 本物チームの勝利！';
+    winEl.className   = 'winner-banner winner-real';
   }
 }
 
@@ -556,10 +677,12 @@ function show(id) {
 
 function resetGame() {
   clearInterval(timerInterval);
-  document.getElementById('ese-guess-input').value  = '';
+  document.getElementById('ese-guess-input').value        = '';
   document.getElementById('ese-guess-result').textContent = '';
   document.getElementById('final-winner').textContent     = '';
   document.getElementById('final-winner').className       = 'winner-banner';
+  document.getElementById('result-topic-block').classList.remove('topic-hidden');
+  document.getElementById('result-teams-block').classList.remove('topic-hidden');
   show('setup-section');
 }
 
