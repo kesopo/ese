@@ -10,14 +10,11 @@
 
 <h2 class="sr-only">エセウルフ ゲーム</h2>
 
-<div class="page-header">
-  <h1>エセウルフ</h1>
-  <p class="subtitle">お題を描きながら、エセを見破れ！</p>
-</div>
-
 <!-- ========== セットアップ ========== -->
 <div id="setup-section" class="section active">
   <div class="card">
+    <h1 style="margin-bottom:2px">エセウルフ</h1>
+    <p class="subtitle">お題を描きながら、エセを見破れ！</p>
     <h2>ゲーム設定</h2>
 
     <div class="label">プレイヤー人数</div>
@@ -114,10 +111,13 @@
 
     <!-- ツールバー -->
     <div class="flex gap8 center wrap mb05" style="row-gap:6px">
-      <!-- 現在色インジケーター -->
-      <div class="color-current" id="color-current"></div>
-      <!-- 色選択 -->
-      <div id="color-btns" class="flex gap8 center wrap"></div>
+      <!-- 現在色インジケーター + 色展開ボタン -->
+      <div class="color-current" id="color-current" onclick="toggleColorPalette()" style="cursor:pointer" title="色を変える"></div>
+      <button class="btn-icon" id="color-toggle-btn" onclick="toggleColorPalette()" style="font-size:12px;padding:4px 8px">色 ▼</button>
+      <!-- 色選択（初期非表示） -->
+      <div id="color-palette-wrap" style="display:none;width:100%">
+        <div id="color-btns" class="flex gap8 center wrap" style="margin-bottom:4px"></div>
+      </div>
       <!-- 太さ・ツール -->
       <div class="flex gap4 center wrap">
         <button class="btn-icon" onclick="setSize(3)">細</button>
@@ -536,7 +536,7 @@ function renderColorBtns() {
     d.className = 'color-dot' + (!isEraser && c === drawColor ? ' active' : '');
     d.style.background = c;
     d.style.border = c === '#ffffff' ? '1.5px solid #ccc' : '2px solid transparent';
-    d.onclick = () => { drawColor = c; isEraser = false; renderColorBtns(); updateColorCurrent(); };
+    d.onclick = () => { drawColor = c; isEraser = false; renderColorBtns(); updateColorCurrent(); closeColorPalette(); };
     el.appendChild(d);
   });
   updateColorCurrent();
@@ -554,6 +554,19 @@ function updateColorCurrent() {
     el.style.backgroundImage = '';
     el.title = '';
   }
+}
+
+function toggleColorPalette() {
+  const wrap = document.getElementById('color-palette-wrap');
+  const btn  = document.getElementById('color-toggle-btn');
+  const open = wrap.style.display === 'none';
+  wrap.style.display = open ? 'block' : 'none';
+  btn.textContent    = open ? '色 ▲' : '色 ▼';
+}
+
+function closeColorPalette() {
+  document.getElementById('color-palette-wrap').style.display = 'none';
+  document.getElementById('color-toggle-btn').textContent = '色 ▼';
 }
 
 function setSize(s)  { drawSize = s; isEraser = false; renderColorBtns(); }
@@ -597,6 +610,9 @@ function showTurn() {
   const lock = document.getElementById('canvas-lock');
   lock.style.display = 'none';
   canvas.style.cursor = 'crosshair';
+
+  // 色パレットを閉じる
+  closeColorPalette();
 
   document.getElementById('draw-turn-name').textContent  = `${players[currentTurn]} さんの番`;
   document.getElementById('draw-round-info').textContent = `第${round}R (${currentTurn + 1}/${playerCount})`;
