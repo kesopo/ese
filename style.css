@@ -297,6 +297,23 @@ button:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
   transition: background 0.15s;
 }
 
+/* ===== キャンバスロックオーバーレイ ===== */
+#canvas-lock {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.52);
+  border-radius: var(--radius-md);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
 /* ===== キャンバス ===== */
 #canvas, #vote-canvas, #result-canvas {
   border: 1.5px solid var(--c-border);

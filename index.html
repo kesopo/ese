@@ -86,7 +86,10 @@
     <div class="topic-box" id="reveal-topic" onclick="toggleReveal()">ここをタップして確認</div>
     <p class="fs13 muted text-center mb1" id="reveal-hint"></p>
 
-    <button class="btn-primary w100" style="padding:10px" onclick="nextReveal()">確認した → 次へ</button>
+    <div class="flex gap8">
+      <button id="reroll-btn" style="display:none;padding:10px 14px" onclick="rerollTopic()">🎲 お題を変える</button>
+      <button class="btn-primary" style="padding:10px;flex:1" onclick="nextReveal()">確認した → 次へ</button>
+    </div>
   </div>
 </div>
 
@@ -106,6 +109,9 @@
 
     <div class="timer-bar-wrap"><div class="timer-bar" id="timer-bar" style="width:100%"></div></div>
 
+    <!-- プレイヤーカラー凡例 -->
+    <div class="flex gap8 center wrap mb05 fs12 muted" id="player-color-legend" style="row-gap:4px"></div>
+
     <!-- ツールバー -->
     <div class="flex gap8 center wrap mb05" style="row-gap:6px">
       <!-- 現在色インジケーター -->
@@ -124,7 +130,14 @@
       </div>
     </div>
 
-    <canvas id="canvas" width="640" height="400"></canvas>
+    <!-- キャンバス＋タイムアップオーバーレイ -->
+    <div style="position:relative;display:inline-block;max-width:100%;width:100%">
+      <canvas id="canvas" width="640" height="400" style="display:block;width:100%"></canvas>
+      <div id="canvas-lock" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.45);border-radius:var(--radius-md);display:none;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:#fff;font-size:20px;font-weight:700">
+        ⏱ 時間終了！
+        <span style="font-size:13px;opacity:0.85">「描き終わった」を押して次へ</span>
+      </div>
+    </div>
 
     <div class="text-center mt1">
       <button class="btn-primary" style="padding:10px 28px" onclick="nextTurn()">描き終わった →</button>
@@ -219,6 +232,11 @@ let lastX = 0, lastY = 0;
 let undoStack = [];
 let redoStack = [];
 const MAX_HISTORY = 40;
+
+// ターン開始時のキャンバス状態（全消去の戻し先）
+let turnStartState = null;
+// タイムアップでキャンバスをロック
+let canvasLocked = false;
 
 let votes = {};
 
@@ -322,25 +340,36 @@ function showReveal() {
 function toggleReveal() {
   revealed = !revealed;
   if (revealed) hasRevealed = true;
-  const topicEl = document.getElementById('reveal-topic');
-  const hintEl  = document.getElementById('reveal-hint');
-  const isEse   = eseIndices.includes(revealIndex);
+  const topicEl  = document.getElementById('reveal-topic');
+  const hintEl   = document.getElementById('reveal-hint');
+  const rerollEl = document.getElementById('reroll-btn');
+  const isEse    = eseIndices.includes(revealIndex);
+  const isFirst  = revealIndex === 0 && !isEse;
 
   if (revealed) {
-    // 内容を表示
     topicEl.className   = 'topic-box revealed';
     topicEl.textContent = isEse ? 'あなたはエセです！' : topic;
     hintEl.textContent  = '確認したら隠してから次へ進んでください';
+    // プレイヤー1（エセでない）のときだけお題変更ボタンを表示
+    if (isFirst) rerollEl.style.display = 'inline-block';
   } else {
-    // 再度隠す（統一テキストに戻す）
     topicEl.className   = 'topic-box';
     topicEl.textContent = 'ここをタップして隠す';
     hintEl.textContent  = '';
-    // 少し待って元テキストに戻す（隠した後も操作性を保つため）
+    rerollEl.style.display = 'none';
     setTimeout(() => {
       if (!revealed) topicEl.textContent = 'ここをタップして確認';
     }, 1200);
   }
+}
+
+function rerollTopic() {
+  const cats = selectedCats.length ? selectedCats : ALL_CATEGORIES;
+  const cat  = cats[Math.floor(Math.random() * cats.length)];
+  topic = QUESTIONS[cat][Math.floor(Math.random() * QUESTIONS[cat].length)];
+  // 表示中なら即更新
+  const topicEl = document.getElementById('reveal-topic');
+  if (revealed) topicEl.textContent = topic;
 }
 
 function nextReveal() {
@@ -355,9 +384,28 @@ function nextReveal() {
 function startDraw() {
   currentTurn = 0; round = 1;
   undoStack = []; redoStack = [];
+  canvasLocked = false;
   initCanvas();
+  renderPlayerColorLegend();
   show('draw-section');
   showTurn();
+}
+
+function renderPlayerColorLegend() {
+  const el = document.getElementById('player-color-legend');
+  el.innerHTML = '';
+  players.forEach((p, i) => {
+    const item = document.createElement('div');
+    item.className = 'flex center gap4';
+    item.style.cssText = 'flex:0 0 auto';
+    const dot = document.createElement('div');
+    dot.style.cssText = `width:12px;height:12px;border-radius:50%;background:${PLAYER_COLORS[i % PLAYER_COLORS.length]};flex-shrink:0;border:1px solid rgba(0,0,0,0.15)`;
+    const label = document.createElement('span');
+    label.textContent = `${p}`;
+    item.appendChild(dot);
+    item.appendChild(label);
+    el.appendChild(item);
+  });
 }
 
 function initCanvas() {
@@ -365,6 +413,7 @@ function initCanvas() {
   const ctx    = canvas.getContext('2d');
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+  turnStartState = ctx.getImageData(0, 0, canvas.width, canvas.height);
   pushUndo();
   setupCanvasEvents(canvas, ctx);
 }
@@ -415,6 +464,7 @@ function setupCanvasEvents(canvas, ctx) {
   ctx.lineJoin = 'round';
 
   canvas.onmousedown = e => {
+    if (canvasLocked) return;
     isDrawing = true;
     const r = canvas.getBoundingClientRect();
     lastX = (e.clientX - r.left) * (canvas.width  / r.width);
@@ -422,7 +472,7 @@ function setupCanvasEvents(canvas, ctx) {
     dot(ctx, lastX, lastY);
   };
   canvas.onmousemove = e => {
-    if (!isDrawing) return;
+    if (canvasLocked || !isDrawing) return;
     const r = canvas.getBoundingClientRect();
     const x = (e.clientX - r.left) * (canvas.width  / r.width);
     const y = (e.clientY - r.top)  * (canvas.height / r.height);
@@ -432,6 +482,7 @@ function setupCanvasEvents(canvas, ctx) {
   canvas.onmouseleave = () => { if (isDrawing) { isDrawing = false; pushUndo(); } };
 
   canvas.ontouchstart = e => {
+    if (canvasLocked) return;
     e.preventDefault();
     isDrawing = true;
     const r = canvas.getBoundingClientRect();
@@ -441,6 +492,7 @@ function setupCanvasEvents(canvas, ctx) {
     dot(ctx, lastX, lastY);
   };
   canvas.ontouchmove = e => {
+    if (canvasLocked) return;
     e.preventDefault();
     if (!isDrawing) return;
     const r = canvas.getBoundingClientRect();
@@ -507,11 +559,14 @@ function updateColorCurrent() {
 function setSize(s)  { drawSize = s; isEraser = false; renderColorBtns(); }
 function setEraser() { isEraser = true; drawSize = 18; renderColorBtns(); }
 function clearCanvas() {
+  if (!turnStartState) return;
   const c   = document.getElementById('canvas');
   const ctx = c.getContext('2d');
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, c.width, c.height);
-  pushUndo();
+  ctx.putImageData(turnStartState, 0, 0);
+  // undoスタックをターン開始状態にリセット
+  undoStack = [turnStartState];
+  redoStack = [];
+  updateHistoryBtns();
 }
 
 function renderDrawDots() {
@@ -527,6 +582,22 @@ function renderDrawDots() {
 function showTurn() {
   drawColor = PLAYER_COLORS[currentTurn % PLAYER_COLORS.length];
   isEraser  = false;
+  canvasLocked = false;
+
+  // ターン開始時のキャンバス状態を保存（全消去の戻し先）
+  const canvas = document.getElementById('canvas');
+  const ctx    = canvas.getContext('2d');
+  turnStartState = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  // undoスタックもターン開始状態からリセット
+  undoStack = [turnStartState];
+  redoStack = [];
+  updateHistoryBtns();
+
+  // ロックオーバーレイを隠す
+  const lock = document.getElementById('canvas-lock');
+  lock.style.display = 'none';
+  canvas.style.cursor = 'crosshair';
+
   document.getElementById('draw-turn-name').textContent  = `${players[currentTurn]} さんの番`;
   document.getElementById('draw-round-info').textContent = `第${round}R (${currentTurn + 1}/${playerCount})`;
   renderColorBtns();
@@ -549,7 +620,15 @@ function startTimer() {
     const pct            = timeLeft / timePerPlayer * 100;
     bar.style.width      = pct + '%';
     bar.style.background = pct > 60 ? 'var(--c-timer-ok)' : pct > 30 ? 'var(--c-timer-mid)' : 'var(--c-timer-low)';
-    if (timeLeft <= 0) { clearInterval(timerInterval); bar.style.width = '0%'; }
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      bar.style.width = '0%';
+      canvasLocked = true;
+      isDrawing = false;
+      const lock = document.getElementById('canvas-lock');
+      lock.style.display = 'flex';
+      document.getElementById('canvas').style.cursor = 'not-allowed';
+    }
   }, 1000);
 }
 
